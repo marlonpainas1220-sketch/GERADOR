@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+
+  @@map("users")
+}
+
+model Project {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  title     String?
+  status    ProjectStatus @default(CREATED)
+  style     NarrativeStyle @default(DRAMATIC)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos    Video[]
+  scenes    Scene[]
+  narrative Narrative?
+  exports   Export[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("projects")
+}
+
+model Video {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  filename   String
+  originalName String @map("original_name")
+  path       String
+  duration   Float?
+  resolution String?
+  fps        Float?
+  size       BigInt
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes  Scene[]
+
+  @@index([projectId])
+  @@map("videos")
+}
+
+model Scene {
+  id             String  @id @default(uuid())
+  videoId        String  @map("video_id")
+  projectId      String  @map("project_id")
+  startTime      Float   @map("start_time")
+  endTime        Float   @map("end_time")
+  description    String?
+  emotions       Json?
+  speakers       Json?
+  transcription  String? @db.Text
+  importanceScore Float? @map("importance_score")
+  metadata       Json?
+
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([projectId])
+  @@index([importanceScore])
+  @@map("scenes")
+}
+
+model Narrative {
+  id        String   @id @default(uuid())
+  projectId String   @unique @map("project_id")
+  structure Json     // Estrutura completa de atos, personagens, etc
+  narrations Json?   // Textos e configurações de narração
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("narratives")
+}
+
+model Export {
+  id         String     @id @default(uuid())
+  projectId  String     @map("project_id")
+  type       ExportType
+  filename   String
+  path       String
+  duration   Float?
+  resolution String?
+  size       BigInt?
+  metadata   Json?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([type])
+  @@map("exports")
+}
+
+model WhatsAppSession {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  sessionData Json?  @map("session_data")
+  projectId String?  @map("project_id")
+  stage     String?
+  context   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_sessions")
+}
+
+enum ProjectStatus {
+  CREATED
+  UPLOADING
+  ANALYZING
+  SHOWRUNNING
+  NARRATING
+  EDITING
+  EXPORTING
+  COMPLETED
+  FAILED
+}
+
+enum NarrativeStyle {
+  DRAMATIC
+  IRONIC
+  DOCUMENTARY
+  MINIMALIST
+}
+
+enum ExportType {
+  EPISODE
+  SHORT_15
+  SHORT_30
+  SHORT_60
+  TEASER
+}
