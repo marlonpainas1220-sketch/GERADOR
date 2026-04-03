@@ -128,6 +128,84 @@ model WhatsAppSession {
   @@map("whatsapp_sessions")
 }
 
+model SocialPage {
+  id                String            @id @default(uuid())
+  handle            String            @unique
+  niche             String
+  followers         Int               @default(0)
+  averageReach      Int               @default(0) @map("average_reach")
+  postingFrequency  Int               @default(0) @map("posting_frequency")
+  officialConnected Boolean           @default(false) @map("official_connected")
+  accessToken       String?           @map("access_token")
+  tokenExpiresAt    DateTime?         @map("token_expires_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  dailyMetrics      DailyMetric[]
+  revenueEntries    RevenueEntry[]
+  strategyInsights  StrategyInsight[]
+
+  @@index([niche])
+  @@index([officialConnected])
+  @@map("social_pages")
+}
+
+model DailyMetric {
+  id              String    @id @default(uuid())
+  pageId          String    @map("page_id")
+  date            DateTime
+  impressions     Int       @default(0)
+  reach           Int       @default(0)
+  likes           Int       @default(0)
+  comments        Int       @default(0)
+  shares          Int       @default(0)
+  saves           Int       @default(0)
+  profileVisits   Int       @default(0) @map("profile_visits")
+  followersDelta  Int       @default(0) @map("followers_delta")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  page            SocialPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, date])
+  @@index([date])
+  @@map("daily_metrics")
+}
+
+model RevenueEntry {
+  id           String      @id @default(uuid())
+  pageId        String      @map("page_id")
+  date          DateTime
+  source        RevenueSource
+  amount        Float
+  currency      String      @default("BRL")
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  page          SocialPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, date])
+  @@index([source])
+  @@map("revenue_entries")
+}
+
+model StrategyInsight {
+  id                   String      @id @default(uuid())
+  pageId               String      @map("page_id")
+  date                 DateTime    @default(now())
+  engagementScore      Float       @map("engagement_score")
+  monetizationScore    Float       @map("monetization_score")
+  growthScore          Float       @map("growth_score")
+  recommendation       String      @db.Text
+  priority             InsightPriority
+  createdAt            DateTime    @default(now()) @map("created_at")
+
+  page                 SocialPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, date])
+  @@index([priority])
+  @@map("strategy_insights")
+}
+
 enum ProjectStatus {
   CREATED
   UPLOADING
@@ -153,4 +231,19 @@ enum ExportType {
   SHORT_30
   SHORT_60
   TEASER
+}
+
+enum RevenueSource {
+  AFFILIATE
+  BRAND_DEAL
+  PRODUCT
+  TRAFFIC
+  OTHER
+}
+
+enum InsightPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
